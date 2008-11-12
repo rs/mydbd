@@ -34,7 +34,15 @@ class MyDBD_PreparedStatement
      * @see MyDBD_PreparedStatement::prepare()
      * @see MyDBD_PreparedStatement::execute()
      *
-     * @param string $query The SQL query to prepare
+     * @param string $query   The SQL query to prepare
+     * @param string $type... List of query parameters types. If provided, the number of items MUST
+     *                        match the number of markers in the prepared query. If omited, types will
+     *                        be automatically guessed from the first execute() parameters PHP ctypes.
+     *                        Items of the string can by one of the following: 'double', 'integer', 'string'.
+     *
+     * <code>
+     * $sth->prepare('SELECT * FROM table WHERE login = ? AND age > ?', 'string', 'integer');
+     * </code>
      *
      * This parameter can include one or more parameter markers in the SQL statement by embedding
      * question mark (?) characters at the appropriate positions.
@@ -49,21 +57,46 @@ class MyDBD_PreparedStatement
      * with NULL by ? IS NULL too. In general, parameters are legal only in Data Manipulation
      * Languange (DML) statements, and not in Data Defination Language (DDL) statements.
      *
-     * @return boolean TRUE on success or FALSE on failure.
+     * @throws InvalidArgumentException If a given type doesn't match autorized list.
+     * @throws SQLMismatchException     If number of types given doesn't match the number of markers
+     *                                  in the query.
+     *
+     * @return void
      */
-    public function prepare($query)
+    public function prepare()
     {
+        $args = func_get_args();
+        $query = array_shift($args);
+
+        if (count($args) > 0)
+        {
+            $types = '';
+
+            foreach ($args as $type)
+            {
+                switch($type)
+                {
+                    case 'string':  $types .= 's'; break;
+                    case 'integer': $types .= 'i'; break;
+                    case 'double':  $types .= 'd'; break;
+                    default:
+                        throw new InvalidArgumentException('Invalid type: ' . $type);
+                }
+            }
+
+            $this->bindVariables($types);
+        }
+
         if ($this->options['query_log']) $start = microtime(true);
 
         if ($this->stmt->prepare($query))
         {
             if ($this->options['query_log']) MyDBD_Logger::log('prepare', $query, null, microtime(true) - $start);
             $this->preparedQuery = $query;
-            return true;
         }
         else
         {
-            return false;
+            $this->handleErrors();
         }
     }
 
@@ -178,22 +211,40 @@ class MyDBD_PreparedStatement
                 }
             }
 
-            $this->boundParams = array_fill(0, $this->stmt->param_count, null);
-            $args = array($this->stmt, $types);
-            for ($i = 0; $i < count($this->boundParams); $i++)
-            {
-                $args[$i + 2] = &$this->bindedData[$i];
-            }
-
-            call_user_func_array('mysqli_stmt_bind_param', $args);
-
-            $this->handleErrors();
+            $this->bindVariables($types);
         }
 
         for ($i = 0; $i < count($params); $i++)
         {
             $this->bindedData[$i] = $params[$i];
         }
+    }
+
+    protected function bindVariables($types)
+    {
+        if (strlen($types) != $this->stmt->param_count)
+        {
+            throw new SQLMismatchException
+            (
+                sprintf
+                (
+                    'Wrong type count for prepared statement: %d expected, %d given.',
+                    $this->stmt->param_count,
+                    strlen($types)
+                )
+            );
+        }
+
+        $this->boundParams = array_fill(0, $this->stmt->param_count, null);
+        $args = array($this->stmt, $types);
+        for ($i = 0; $i < count($this->boundParams); $i++)
+        {
+            $args[$i + 2] = &$this->bindedData[$i];
+        }
+
+        call_user_func_array('mysqli_stmt_bind_param', $args);
+
+        $this->handleErrors();
     }
 
     protected function handleErrors()

@@ -224,19 +224,39 @@ class MyDBD
     /**
      * Performs a query on the database.
      *
-     * @param string $query  The SQL query.
-     * @param array  $params Values for placeholders of the SQL query if any. Quantity of values passed
-     *                       must match quantity of placeholders in the query. If placeholders are
-     *                       are used in the query, the query will be prepared and this parameter
-     *                       is mandatory, otherwise, this parameter doesn't have to be given.
+     * @param string $query    The SQL query.
+     * @param mixed  $param... Values for placeholders of the SQL query if any. Quantity of values passed
+     *                         must match quantity of placeholders in the query. If placeholders are
+     *                         are used in the query, the query will be prepared and this parameter
+     *                         is mandatory, otherwise, this parameter doesn't have to be given.
+     *                         NOTE: for backward compat, if only one param is given and is an array,
+     *                         the content of the array is treated as param list.
+     *
+     * <code>
+     * $dbh->query('SELECT COUNT(*) FROM table');
+     *
+     * $dbh->query('INSERT INTO table (username, password) VALUES(?, ?)', $username, $password);
+     *
+     * # compatility mode
+     * $dbh->query('INSERT INTO table (username, password) VALUES(?, ?)', array($username, $password));
+     * </code>
      *
      * @throws SQLException if an error happen
      *
      * @return MyDBD_ResultSet if no placeholder where used or MyDBD_StatementResultSet if placeholders
      *         where used and query had to be prepared.
      */
-    public function query($query, $params = null)
+    public function query()
     {
+        $params = func_get_args();
+        $query = array_shift($params);
+
+        // backward compat, support params given as array
+        if (count($params) == 1 && is_array($params[0]))
+        {
+            $params = $params[0];
+        }
+
         $this->injectExtendedInfo($query);
 
         if ($this->options['readonly'])
@@ -246,10 +266,10 @@ class MyDBD
 
         if ($this->options['query_log']) $start = microtime(true);
 
-        if (isset($params) && (is_array($params) ? count($params) > 0 : !empty($params)))
+        if (count($params) > 0)
         {
             $sth = $this->prepare($query);
-            $result = call_user_func_array(array($sth, 'execute'), is_array($params) ? $params : $params);
+            $result = call_user_func_array(array($sth, 'execute'), $params);
         }
         else
         {
@@ -271,6 +291,10 @@ class MyDBD
      * @see MyDBD_PreparedStatement::execute()
      *
      * @param string $query The SQL query to prepare
+     * @param string $type... List of query parameters types. If provided, the number of items MUST
+     *                        match the number of markers in the prepared query. If omited, types will
+     *                        be automatically guessed from the first execute() parameters PHP ctypes.
+     *                        Items of the string can by one of the following: 'double', 'integer', 'string'.
      *
      * This parameter can include one or more parameter markers in the SQL statement by embedding
      * question mark (?) characters at the appropriate positions.
@@ -287,14 +311,16 @@ class MyDBD
      *
      * @return MyDBD_PreparedStatement
      */
-    public function prepare($query)
+    public function prepare()
     {
+        $args = func_get_args();
+
         $stmt = $this->link()->stmt_init();
         $this->lastQueryHandle = $stmt; // used by affectedRows()
         $this->handleErrors();
 
         $sth = new MyDBD_PreparedStatement($stmt, $this->options);
-        $sth->prepare($query);
+        call_user_func_array(array($sth, 'prepare'), $args);
 
         return $sth;
     }
