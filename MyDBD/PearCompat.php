@@ -82,9 +82,7 @@ abstract class MyDBD_PearCompat
 
     static public function getOne(MyDBD $dbh, $query, $params = array())
     {
-        $res = $dbh->query($query, $params);
-        MyDBD_PEARCompat::fetchInto($res, $row, DB_FETCHMODE_ORDERED);
-        return $row[0];
+        return $dbh->query($query, $params)->fetchColumn(0);
     }
 
     static public function getRow(MyDBD $dbh, $query, $params = array(), $fetchmode = DB_FETCHMODE_DEFAULT)

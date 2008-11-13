@@ -10,17 +10,23 @@
  */
 class MyDBD_ResultSet implements SeekableIterator, Countable
 {
+    /**#@+ @see setFetchMode() */
     const
-        FETCHMODE_ORDERED = 1,
-        FETCHMODE_ASSOC   = 2,
-        FETCHMODE_OBJECT  = 3;
+        FETCH_ORDERED = 1,
+        FETCH_ASSOC   = 2,
+        FETCH_OBJECT  = 3,
+        FETCH_COLUMN  = 4;
+    /**#@-*/
 
+    /**#@+ @ignore */
     protected
         $result     = null,
         $options    = null,
         $cursor     = 0,
-        $fetchMode  = self::FETCHMODE_ORDERED,
-        $fetchClass = null;
+        $fetchMode  = self::FETCH_ORDERED,
+        $fetchClass = 'stdClass',
+        $fetchCol   = 0;
+    /**#@-*/
 
     /**
      * This object is meant to be created by MyDBD.
@@ -36,39 +42,49 @@ class MyDBD_ResultSet implements SeekableIterator, Countable
     /**
      * Sets the default fetch mode used by curret() and next().
      *
-     * @param integer $mode Ether MyDBD_ResultSet::FETCHMODE_ORDERED, MyDBD_ResultSet::FETCHMODE_ASSOC
-     *                      or MyDBD_ResultSet::FETCHMODE_OBJECT.
+     * @param integer $mode Ether MyDBD_ResultSet::FETCH_ORDERED, MyDBD_ResultSet::FETCH_ASSOC,
+     *                      MyDBD_ResultSet::FETCH_OBJECT or MyDBD_ResultSet::FETCH_COLUMN.
      *
-     * - FETCHMODE_ORDERED: Result is stored in an array of string with numerical keys in the order
-     *                      of the fields of the query.
-     * - FETCHMODE_ASSOC:   Result is stored in an associative array with keys named like fields of
-     *                      the query
-     * - FETCHMODE_OBJECT:  Result is stored in properties of an object.
+     * - FETCH_ORDERED: Result is stored in an array of string with numerical keys in the order
+     *                  of the fields of the query.
+     * - FETCH_ASSOC:   Result is stored in an associative array with keys named like fields of
+     *                  the query
+     * - FETCH_OBJECT:  Result is stored in properties of an object.
+     * - FETCH_COLUMN:  Result is stored in a string containing only the asked column.
      *
-     * @param string $class If mode is MyDBD_ResultSet::FETCHMODE_OBJECT, this parameter will change
-     *                      the class used to create the object. If not provided, stdClass is used
-     *                      by default.
+     * @param string|integer $arg Optional argument for some fetch modes:
+     *
+     * - If mode is MyDBD_ResultSet::FETCH_OBJECT, this parameter will change the class used to create
+     *   the object. If not provided, stdClass is used by default.
+     * - If mode is MyDBD_ResultSet::FETCH_COLUMN, this parameter defines which column to fetch.
+     *   The column can be expressed either as a numeric index or as string field name. If not
+     *   provided, 0 is used.
+     *
+     * @return $this
      */
-    public function setFetchMode($mode, $class = 'stdClass')
+    public function setFetchMode($mode, $arg = null)
     {
-        if ($mode !== self::FETCHMODE_ORDERED && $mode !== self::FETCHMODE_ASSOC && $mode !== self::FETCHMODE_OBJECT)
+        if ($mode !== self::FETCH_ORDERED && $mode !== self::FETCH_ASSOC && $mode !== self::FETCH_OBJECT && $mode !== self::FETCH_COLUMN)
         {
             throw InvalidArgumentException('Invalid fetch mode: ' . $mode);
         }
 
         $this->fetchMode = $mode;
 
-        if ($mode == self::FETCHMODE_OBJECT)
+        switch ($mode)
         {
-            $this->fetchClass = $class;
+            case self::FETCH_OBJECT: $this->fetchClass = isset($arg) ? $arg : 'stdClass'; break;
+            case self::FETCH_COLUMN: $this->fetchCol   = isset($arg) ? $arg : 0;          break;
         }
+
+        return $this;
     }
 
     /**
      * Returns the current default fetch mode.
      *
-     * @return integer MyDBD_ResultSet::FETCHMODE_ORDERED, MyDBD_ResultSet::FETCHMODE_ASSOC or
-     *                 MyDBD_ResultSet::FETCHMODE_OBJECT
+     * @return integer MyDBD_ResultSet::FETCH_ORDERED, MyDBD_ResultSet::FETCH_ASSOC,
+     *                 MyDBD_ResultSet::FETCH_OBJECT or MyDBD_ResultSet::FETCH_COLUMN
      */
     public function getFetchMode()
     {
@@ -132,9 +148,10 @@ class MyDBD_ResultSet implements SeekableIterator, Countable
 
         switch(isset($mode) ? $mode : $this->fetchMode)
         {
-            case self::FETCHMODE_ORDERED: return $this->fetchAsArray();
-            case self::FETCHMODE_ASSOC:   return $this->fetchAsAssoc();
-            case self::FETCHMODE_OBJECT:  return $this->fetchAsObject();
+            case self::FETCH_ORDERED: return $this->fetchArray();
+            case self::FETCH_ASSOC:   return $this->fetchAssoc();
+            case self::FETCH_OBJECT:  return $this->fetchObject();
+            case self::FETCH_COLUMN:  return $this->fetchColumn();
         }
     }
 
@@ -177,19 +194,116 @@ class MyDBD_ResultSet implements SeekableIterator, Countable
         return $this->cursor >= 0 && $this->cursor < $this->result->num_rows;
     }
 
-    protected function fetchAsArray()
+    /**
+     * Returns an array containing all of the result set rows.    The array format will depend on
+     * the default fetch mode. You can change default fetch mode by calling setFetchMode() before
+     * this method.
+     *
+     * <code>
+     * $result = $dbh->query('SELECT * FROM table')
+     *     ->setFetchMode(MyDBD_Result::FETCH_ASSOC)
+     *     ->fetchAll();
+     *
+     * print_r($result);
+     * </code>
+     * <pre>
+     * Array
+     * (
+     *     [0] => Array
+     *         (
+     *             [column1] => 'value_row1_column1'
+     *             [column2] => 123
+     *         )
+     *     [1] => Array
+     *     ...
+     * )
+     * </pre>
+     *
+     * <code>
+     * $result = $dbh->query('SELECT * FROM table')
+     *     ->setFetchMode(MyDBD_Result::FETCH_COLUMN)
+     *     ->fetchAll();
+     *
+     * print_r($result);
+     * </code>
+     * <pre>
+     * Array
+     * (
+     *     [0] => 'value_row1_column1'
+     *     [1] => 'value_row2_column1'
+     *     ...
+     * )
+     * </pre>
+     *
+     * @see setFetchMode()
+     */
+    public function fetchAll()
+    {
+        return iterator_to_array($this);
+    }
+
+    /**
+     * Fetches the next row and returns it as a simple array.
+     */
+    public function fetchArray()
     {
         return $this->result->fetch_array();
     }
 
-    protected function fetchAsAssoc()
+    /**
+     * Fetches the next row and returns it as an associative array.
+     */
+    public function fetchAssoc()
     {
         return $this->result->fetch_assoc();
     }
 
-    protected function fetchAsObject()
+    /**
+     * Fetches the next row and returns it as an object.
+     *
+     * @param string $class Change the class to use (default stdClass).
+     */
+    public function fetchObject($class = null)
     {
-        return $this->result->fetch_object();
+        $class = isset($class) ? $class : $this->fetchClass;
+        return $this->result->fetch_object($class);
+    }
+
+    /**
+     * Returns a single column from the next row of a result set.
+     *
+     * @param integer|string $col Change the column to fetch. Can be either column index (starting at
+     * offset 0) or field name (default 0).
+     *
+     * @throws OutOfBoundsException     If specified column argument isn't in the result set.
+     * @throws InvalidArgumentException If specified column argument is neither string nor an integer.
+     *
+     * @return mixed The column data.
+     */
+    public function fetchColumn($col = null)
+    {
+        $col = isset($col) ? $col : $this->fetchCol;
+
+        if (is_int($col))
+        {
+            $arr = $this->fetchArray();
+
+        }
+        elseif (is_string($col))
+        {
+            $arr = $this->fetchAssoc();
+        }
+        else
+        {
+            throw new InvalidArgumentException('Invalid column reference: . ' . $col);
+        }
+
+        if (!isset($arr[$col]))
+        {
+            throw new OutOfBoundsException('Invalid column name or index: ' . $col);
+        }
+
+        return $arr[$col];
     }
 
     // PEAR::Db compatibility layer

@@ -92,3 +92,4 @@ class SQLConstraintNotNullException extends SQLException {}
 class SQLReadOnlyException extends SQLException {}
 class SQLNotConnectedException extends SQLException {}
 class SQLNotPreparedStatementException extends SQLException {}
+/**#@-*/

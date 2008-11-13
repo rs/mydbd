@@ -49,17 +49,17 @@ class MyDBD_StatementResultSet extends MyDBD_ResultSet
     }
 
     /**
-     * Emulate the fetchAsArray on a statement result
+     * @see ResultSet::fetchArray()
      */
-    protected function fetchAsArray()
+    public function fetchArray()
     {
         return $this->result->fetch() ? $this->boundData : null;
     }
 
     /**
-     * Emulate the fetchAsAssoc on a statement result
+     * @see ResultSet::fetchAssoc()
      */
-    protected function fetchAsAssoc()
+    public function fetchAssoc()
     {
         if ($this->result->fetch())
         {
@@ -80,9 +80,9 @@ class MyDBD_StatementResultSet extends MyDBD_ResultSet
     }
 
     /**
-     * Emulate the fetchAsObject on a statement result
+     * @see ResultSet::fetchObject()
      */
-    protected function fetchAsObject()
+    public function fetchObject()
     {
         if ($this->result->fetch())
         {
