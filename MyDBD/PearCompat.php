@@ -24,6 +24,8 @@ abstract class MyDBD_PearCompat
         }
     }
 
+    /**#@+ @deprecated */
+
     static public function affectedRows(MyDBD $dbh)
     {
         return $dbh->getAffectedRows();
@@ -34,14 +36,14 @@ abstract class MyDBD_PearCompat
         return call_user_func_array(array($statement, 'execute'), !is_array($params) ? array($params) : $params);
     }
 
-    static public function fetchRow(MyDBD_ResultSet $res, $mode = DB_FETCHMODE_ORDERED)
+    static public function fetchRow(MyDBD_ResultSet $res, $fetchMode = DB_FETCHMODE_ORDERED)
     {
-        return $res->next($mode);
+        return $res->next($fetchMode);
     }
 
-    static public function fetchInto(MyDBD_ResultSet $res, &$row, $mode = DB_FETCHMODE_ORDERED)
+    static public function fetchInto(MyDBD_ResultSet $res, &$row, $fetchMode = DB_FETCHMODE_ORDERED)
     {
-        $row = MyDBD_PEARCompat::fetchRow($res, $mode);
+        $row = $res->next($fetchMode);
     }
 
     static public function getCol(MyDBD $dbh, $query, $col = 0, $params = array())
@@ -54,9 +56,9 @@ abstract class MyDBD_PearCompat
         return $dbh->query($query, $params)->fetchColumn(0);
     }
 
-    static public function getRow(MyDBD $dbh, $query, $params = array(), $mode = DB_FETCHMODE_ORDERED)
+    static public function getRow(MyDBD $dbh, $query, $params = array(), $fetchMode = DB_FETCHMODE_ORDERED)
     {
-        return $dbh->query($query, $params)->next($mode);
+        return $dbh->query($query, $params)->next($fetchMode);
     }
 
     /**
@@ -64,9 +66,9 @@ abstract class MyDBD_PearCompat
      *
      * @see http://pear.php.net/manual/en/package.database.db.db-common.getall.php
      */
-    static public function getAll(MyDBD $dbh, $query, $params = array(), $mode = DB_FETCHMODE_ORDERED)
+    static public function getAll(MyDBD $dbh, $query, $params = array(), $fetchMode = DB_FETCHMODE_ORDERED)
     {
-        return $dbh->query($query, $params)->setFetchMode($mode)->fetchAll();
+        return $dbh->query($query, $params)->setFetchMode($fetchMode)->fetchAll();
     }
 
     /**
@@ -94,10 +96,10 @@ abstract class MyDBD_PearCompat
 
         if ($cols > 2 || (isset($force_array) && $force_array))
         {
-            switch($fetchmode)
+            switch($fetchMode)
             {
                 case DB_FETCHMODE_ASSOC:
-                    while (is_array($row = $res->fetchRowAsAssoc()))
+                    while (is_array($row = $res->fetchAssoc()))
                     {
                         reset($row);
                         $key = current($row);
@@ -114,7 +116,7 @@ abstract class MyDBD_PearCompat
                     break;
 
                 case DB_FETCHMODE_OBJECT:
-                    while ($row = MyDBD_PEARCompat::fetchRow($res, DB_FETCHMODE_OBJECT))
+                    while ($row = $res->fetchObject())
                     {
                         $arr = get_object_vars($row);
                         $key = current($arr);
@@ -130,7 +132,7 @@ abstract class MyDBD_PearCompat
                     break;
 
                 default:
-                    while (is_array($row = $res->fetchRow(DB_FETCHMODE_ORDERED)))
+                    while (is_array($row = $res->fetchArray()))
                     {
                         // we shift away the first element to get
                         // indices running from 0 again
@@ -165,4 +167,6 @@ abstract class MyDBD_PearCompat
 
         return $results;
     }
+
+    /**#@-*/
 }
