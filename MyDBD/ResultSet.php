@@ -16,10 +16,8 @@ class MyDBD_ResultSet implements SeekableIterator, Countable
         FETCHMODE_OBJECT  = 3;
 
     protected
-        $result  = null,
-        $options = null;
-
-    private
+        $result     = null,
+        $options    = null,
         $cursor     = 0,
         $fetchMode  = self::FETCHMODE_ORDERED,
         $fetchClass = null;

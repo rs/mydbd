@@ -104,12 +104,7 @@ abstract class MyDBD_PearCompat
         if ($fetchmode == DB_FETCHMODE_DEFAULT) $fetchmode = DB_FETCHMODE_ORDERED;
         $res = $dbh->query($query, $params);
         $res->setFetchMode($fetchmode);
-        $result = array();
-        foreach ($res as $row)
-        {
-            $result[] = $row;
-        }
-        return $result;
+        return iterator_to_array($res);
     }
 
     /**
