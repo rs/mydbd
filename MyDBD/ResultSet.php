@@ -286,24 +286,31 @@ class MyDBD_ResultSet implements SeekableIterator, Countable
 
         if (is_int($col))
         {
-            $arr = $this->fetchArray();
+            $data = $this->fetchArray();
 
         }
         elseif (is_string($col))
         {
-            $arr = $this->fetchAssoc();
+            $data = $this->fetchAssoc();
         }
         else
         {
             throw new InvalidArgumentException('Invalid column reference: . ' . $col);
         }
 
-        if (!array_key_exists($col, $arr))
+        if (isset($data))
         {
-            throw new OutOfBoundsException('Invalid column name or index: ' . $col);
-        }
+            if (!array_key_exists($col, $data))
+            {
+                throw new OutOfBoundsException('Invalid column name or index: ' . $col);
+            }
 
-        return $arr[$col];
+            return $data[$col];
+        }
+        else
+        {
+            return null;
+        }
     }
 
     // PEAR::Db compatibility layer
