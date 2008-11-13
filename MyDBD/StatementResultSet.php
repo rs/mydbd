@@ -82,10 +82,11 @@ class MyDBD_StatementResultSet extends MyDBD_ResultSet
     /**
      * @see ResultSet::fetchObject()
      */
-    public function fetchObject()
+    public function fetchObject($class = null)
     {
         if ($this->result->fetch())
         {
+            $class = isset($class) ? $class : $this->fetchClass;
             $assoc = array();
             $fieldNames = $this->getFieldNames();
 
@@ -94,15 +95,14 @@ class MyDBD_StatementResultSet extends MyDBD_ResultSet
                 $assoc[$fieldNames[$i]] = $this->boundData[$i];
             }
 
-            if ($this->fetchClass == 'stdClass')
+            if ($class == 'stdClass')
             {
                 return (object) $assoc;
             }
             else
             {
                 // NOTE: This is not equivalent to mysqli_fetch_object()
-                $className = $this->fetchClass;
-                return new $className($assoc);
+                return new $class($assoc);
             }
         }
         else

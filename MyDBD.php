@@ -101,7 +101,7 @@ class MyDBD
     public function __construct(array $connectionInfo = array(), array $options = array())
     {
         // lazy constructor, don't connect in the constructor
-        $this->link = mysqli::init();
+        $this->link = mysqli_init();
 
         $this->connectionInfo = array_merge
         (
