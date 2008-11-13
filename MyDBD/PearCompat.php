@@ -17,7 +17,7 @@ abstract class MyDBD_PearCompat
     {
         if (!defined('DB_FETCHMODE_DEFAULT'))
         {
-            define('DB_FETCHMODE_DEFAULT', 0);
+            define('DB_FETCHMODE_DEFAULT', 1);
             define('DB_FETCHMODE_ORDERED', 1);
             define('DB_FETCHMODE_ASSOC',   2);
             define('DB_FETCHMODE_OBJECT',  3);
@@ -31,53 +31,22 @@ abstract class MyDBD_PearCompat
 
     static public function execute(MyDBD $dbh, MyDBD_PreparedStatement $statement, $params = null)
     {
-        if (isset($params) && !is_array($params))
-        {
-            $params = array($params);
-        }
-
-        return call_user_func_array(array($statement, 'execute'), $params);
+        return call_user_func_array(array($statement, 'execute'), !is_array($params) ? array($params) : $params);
     }
 
-    static public function fetchRow(MyDBD_ResultSet $res, $mode = DB_FETCHMODE_DEFAULT)
+    static public function fetchRow(MyDBD_ResultSet $res, $mode = DB_FETCHMODE_ORDERED)
     {
-        if ($mode == DB_FETCHMODE_DEFAULT) $mode = DB_FETCHMODE_ORDERED;
-        $row = $res->next($mode);
-        return $row;
+        return $res->next($mode);
     }
 
-    static public function fetchInto(MyDBD_ResultSet $res, &$row, $mode = DB_FETCHMODE_DEFAULT)
+    static public function fetchInto(MyDBD_ResultSet $res, &$row, $mode = DB_FETCHMODE_ORDERED)
     {
         $row = MyDBD_PEARCompat::fetchRow($res, $mode);
     }
 
     static public function getCol(MyDBD $dbh, $query, $col = 0, $params = array())
     {
-        $res = $dbh->query($query, $params);
-
-        $fetchmode = is_int($col) ? DB_FETCHMODE_ORDERED : DB_FETCHMODE_ASSOC;
-
-        if (!is_array($row = MyDBD_PEARCompat::fetchRow($res, $fetchmode)))
-        {
-            $ret = array();
-        }
-        else
-        {
-            if (!array_key_exists($col, $row))
-            {
-                throw new SQLNoSuchFieldException();
-            }
-            else
-            {
-                $ret = array($row[$col]);
-                while (is_array($row = MyDBD_PEARCompat::fetchRow($res, $fetchmode)))
-                {
-                    $ret[] = $row[$col];
-                }
-            }
-        }
-
-        return $ret;
+        return $dbh->query($query, $params)->setFetchMode(MyDBD_ResultSet::FETCH_COLUMN, $col)->fetchAll();
     }
 
     static public function getOne(MyDBD $dbh, $query, $params = array())
@@ -85,11 +54,9 @@ abstract class MyDBD_PearCompat
         return $dbh->query($query, $params)->fetchColumn(0);
     }
 
-    static public function getRow(MyDBD $dbh, $query, $params = array(), $fetchmode = DB_FETCHMODE_DEFAULT)
+    static public function getRow(MyDBD $dbh, $query, $params = array(), $mode = DB_FETCHMODE_ORDERED)
     {
-        $res = $dbh->query($query, $params);
-        MyDBD_PEARCompat::fetchInto($res, $row, $fetchmode);
-        return $row;
+        return $dbh->query($query, $params)->next($mode);
     }
 
     /**
@@ -97,12 +64,9 @@ abstract class MyDBD_PearCompat
      *
      * @see http://pear.php.net/manual/en/package.database.db.db-common.getall.php
      */
-    static public function getAll(MyDBD $dbh, $query, $params = array(), $fetchmode = DB_FETCHMODE_DEFAULT)
+    static public function getAll(MyDBD $dbh, $query, $params = array(), $mode = DB_FETCHMODE_ORDERED)
     {
-        if ($fetchmode == DB_FETCHMODE_DEFAULT) $fetchmode = DB_FETCHMODE_ORDERED;
-        $res = $dbh->query($query, $params);
-        $res->setFetchMode($fetchmode);
-        return iterator_to_array($res);
+        return $dbh->query($query, $params)->setFetchMode($mode)->fetchAll();
     }
 
     /**
@@ -115,7 +79,7 @@ abstract class MyDBD_PearCompat
      *
      * @see http://pear.php.net/manual/en/package.database.db.db-common.getassoc.php
      */
-    static public function getAssoc(MyDBD $dbh, $query, $forceArray = false, $params = array(), $fetchMode = DB_FETCHMODE_DEFAULT, $group = false)
+    static public function getAssoc(MyDBD $dbh, $query, $forceArray = false, $params = array(), $fetchMode = DB_FETCHMODE_ORDERED, $group = false)
     {
         $res = $dbh->query($query, $params);
 
