@@ -298,7 +298,7 @@ class MyDBD_ResultSet implements SeekableIterator, Countable
             throw new InvalidArgumentException('Invalid column reference: . ' . $col);
         }
 
-        if (!isset($arr[$col]))
+        if (!array_key_exists($col, $arr))
         {
             throw new OutOfBoundsException('Invalid column name or index: ' . $col);
         }
