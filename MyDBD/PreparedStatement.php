@@ -117,6 +117,9 @@ class MyDBD_PreparedStatement
         else
         {
             $this->handleErrors();
+
+            // if handle errors doesn't throw an exception, do it by ourself
+            throw new SQLException('Cannot prepare statement: ' . $query);
         }
     }
 
@@ -226,11 +229,11 @@ class MyDBD_PreparedStatement
                 {
                     $types .= 'd';
                 }
-                else if (is_integer($param))
+                elseif (is_integer($param))
                 {
                     $types .= 'i';
                 }
-                else if (is_string($param))
+                else
                 {
                     $types .= 's';
                 }

@@ -350,6 +350,7 @@ class MyDBD
         if (!isset($this->statementCache[$cacheKey]))
         {
             $this->statementCache[$cacheKey] = call_user_func_array(array($this, 'prepare'), $args);
+            $this->statementCache[$cacheKey]->freeze();
         }
 
         return $this->statementCache[$cacheKey];
@@ -679,7 +680,7 @@ class MyDBD
 
         if ($this->replicationDelay == -1)
         {
-            $slaveInfo = $this->getRow("SHOW SLAVE STATUS", null, DB_FETCHMODE_ASSOC);
+            $slaveInfo = $this->query("SHOW SLAVE STATUS")->fetchAssoc();
 
             if (isset($slaveInfo['Seconds_Behind_Master']))
             {
@@ -700,10 +701,7 @@ class MyDBD
         {
             $this->engines = array();
 
-            $rs = $this->query('SHOW ENGINES');
-            $row = null;
-
-            while($rs->fetchInto($row))
+            foreach ($this->query('SHOW ENGINES') as $row)
             {
                 if($row[1] == 'YES' || $row[1] == 'DEFAULT')
                 {
