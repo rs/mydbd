@@ -47,6 +47,7 @@ class MyDBD
         $link                   = null,
         $connected              = false,
         $connectionInfo         = null,
+        $statementCache         = array(),
         $lastQueryHandle        = null,
         $extendedConnectionInfo = array(),
         $extendedQueryInfo      = array(),
@@ -83,6 +84,8 @@ class MyDBD
      * - query_log:           If query_log is on, all queries will be logged using MyDBD_Logger. (bool)
      * - pear_compat:         Activate the PEAR Db compatibility layer. (bool)
      * - pear_compat_class:   Change the default PEAR Db compatibility class. (string)
+     * - query_prepare_cache: Make the query() method to use prepareCached() instead of prepare()
+     *                        when needed.
      * - client_interactive:  Allow interactive_timeout seconds (instead of wait_timeout seconds)
      *                        of inactivity before closing the connection. (bool)
      * - connect_timeout:     Connection timeout in seconds (int)
@@ -130,6 +133,7 @@ class MyDBD
                 'query_log'             => false,
                 'pear_compat'           => false,
                 'pear_compat_class'     => 'MyDBD_PearCompat',
+                'query_prepare_cache'   => false,
                 'connect_timeout'       => 0,
                 'wait_timeout'          => 0,
                 'client_interactive'    => false,
@@ -268,14 +272,14 @@ class MyDBD
 
         if (count($params) > 0)
         {
-            $sth = $this->prepare($query);
+            $sth = $this->options['query_prepare_cache'] ? $this->prepareCached($query) : $this->prepare($query);
             $result = call_user_func_array(array($sth, 'execute'), $params);
         }
         else
         {
             $result = new MyDBD_ResultSet($this->link()->query($query), $this->options);
             $this->handleErrors();
-            $this->lastQueryHandle = $this->link(); // used by affectedRows()
+            $this->lastQueryHandle = $this->link(); // used by getAffectedRows()
 
             if ($this->options['query_log']) MyDBD_Logger::log('query', $query, null, microtime(true) - $start);
         }
@@ -290,7 +294,7 @@ class MyDBD
      * @see MyDBD_PreparedStatement::prepare()
      * @see MyDBD_PreparedStatement::execute()
      *
-     * @param string $query The SQL query to prepare
+     * @param string $query   The SQL query to prepare
      * @param string $type... List of query parameters types. If provided, the number of items MUST
      *                        match the number of markers in the prepared query. If omited, types will
      *                        be automatically guessed from the first execute() parameters PHP ctypes.
@@ -323,6 +327,32 @@ class MyDBD
         call_user_func_array(array($sth, 'prepare'), $args);
 
         return $sth;
+    }
+
+    /**
+     * Same as prepare() with statement cache management.
+     *
+     * @see prepare()
+     *
+     * @param string $query   The SQL query to prepare
+     * @param string $type... List of query parameters types. If provided, the number of items MUST
+     *                        match the number of markers in the prepared query. If omited, types will
+     *                        be automatically guessed from the first execute() parameters PHP ctypes.
+     *                        Items of the string can by one of the following: 'double', 'integer', 'string'.
+     *
+     * @return MyDBD_PreparedStatement
+     */
+    public function prepareCached()
+    {
+        $args = func_get_args();
+        $cacheKey = md5($args[0]);
+
+        if (!isset($this->statementCache[$cacheKey]))
+        {
+            $this->statementCache[$cacheKey] = call_user_func_array(array($this, 'prepare'), $args);
+        }
+
+        return $this->statementCache[$cacheKey];
     }
 
     /**

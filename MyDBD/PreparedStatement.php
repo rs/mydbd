@@ -13,7 +13,9 @@ class MyDBD_PreparedStatement
     private
         $stmt           = null,
         $options        = null,
+        $frozen         = false,
         $preparedQuery  = null,
+        $resultSet      = null,
         $boundParams    = null;
 
     /**
@@ -25,6 +27,18 @@ class MyDBD_PreparedStatement
     {
         $this->stmt    = $preparedStatement;
         $this->options = $options;
+    }
+
+    /**
+     * Freeze the statement so it's not possible to prepare another query with it. This permits to
+     * store this statement in a cache safely.
+     *
+     * @return $this
+     */
+    public function freeze()
+    {
+        $this->frozen = true;
+        return $this;
     }
 
     /**
@@ -57,6 +71,7 @@ class MyDBD_PreparedStatement
      * with NULL by ? IS NULL too. In general, parameters are legal only in Data Manipulation
      * Languange (DML) statements, and not in Data Defination Language (DDL) statements.
      *
+     * @throws RuntimeException         If calling this method on a frozen statement (stored in cache).
      * @throws InvalidArgumentException If a given type doesn't match autorized list.
      * @throws SQLMismatchException     If number of types given doesn't match the number of markers
      *                                  in the query.
@@ -65,6 +80,11 @@ class MyDBD_PreparedStatement
      */
     public function prepare()
     {
+        if ($this->frozen)
+        {
+            throw new RuntimeException('Cannot call prepare() on a frozen statement.');
+        }
+
         $args = func_get_args();
         $query = array_shift($args);
 
@@ -151,7 +171,12 @@ class MyDBD_PreparedStatement
             // integrity problem due to mysqli design limitation
             // you can't store several result set on several executed query
             // from the same prepared statment
-            return new MyDBD_StatementResultSet($this->stmt, $metadata, $this->options);
+            if (!isset($this->resultSet))
+            {
+                $this->resultSet = new MyDBD_StatementResultSet($this->stmt, $metadata, $this->options);
+            }
+
+            return $this->resultSet->reset();
         }
         else
         {
@@ -171,7 +196,7 @@ class MyDBD_PreparedStatement
      *                 matched the WHERE clause in the query or that no query has yet been executed.
      *                 -1 indicates that the query returned an error.
      */
-    public function affectedRows()
+    public function getAffectedRows()
     {
         return $this->stmt->affected_rows;
     }

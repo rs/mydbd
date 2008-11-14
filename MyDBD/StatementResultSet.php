@@ -49,6 +49,25 @@ class MyDBD_StatementResultSet extends MyDBD_ResultSet
     }
 
     /**
+     * Reset the object so it can be reused for anoter row.
+     *
+     * @return $this
+     */
+    public function reset()
+    {
+        if ($this->cursor !== 0)
+        {
+            $this->seek(0);
+        }
+
+        $this->fetchMode  = self::FETCH_ORDERED;
+        $this->fetchClass = 'stdClass';
+        $this->fetchCol   = 0;
+
+        return $this;
+    }
+
+    /**
      * @see ResultSet::fetchArray()
      */
     public function fetchArray()
