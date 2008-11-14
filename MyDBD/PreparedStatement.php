@@ -88,6 +88,11 @@ class MyDBD_PreparedStatement
         $args = func_get_args();
         $query = array_shift($args);
 
+        if (count($args) === 1 && is_array($args[0]))
+        {
+            $args = $args[0];
+        }
+
         if (count($args) > 0)
         {
             $types = '';
@@ -160,6 +165,13 @@ class MyDBD_PreparedStatement
         if ($this->stmt->param_count > 0)
         {
             $params = func_get_args();
+
+            // PDO compat: support params as an array in first argument
+            if (count($params) === 1 && is_array($params[0]))
+            {
+                $params = $params[0];
+            }
+
             $this->bindParams($params);
         }
 
@@ -204,7 +216,7 @@ class MyDBD_PreparedStatement
         return $this->stmt->affected_rows;
     }
 
-    protected function bindParams($params)
+    protected function bindParams(array $params)
     {
         if (count($params) != $this->stmt->param_count)
         {

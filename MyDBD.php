@@ -55,6 +55,13 @@ class MyDBD
         $realtime               = null,
         $engines                = null;
 
+    static public function register()
+    {
+        $base = dirname(__FILE__);
+        require_once $base . '/MyDBD/Error.php';
+        spl_autoload_register(create_function('$class', 'require "' . $base . '/" . str_replace("_", "/", $class) . ".php";'));
+    }
+
     /**
      * MyDBD constructor will init a new mysqli handle ready to be connected to a database.
      * The constructor doesn't actually connect to the database, a call to connect() have to be made.
@@ -247,8 +254,9 @@ class MyDBD
      *
      * @throws SQLException if an error happen
      *
-     * @return MyDBD_ResultSet if no placeholder where used or MyDBD_StatementResultSet if placeholders
-     *         where used and query had to be prepared.
+     * @return mixed If no placeholder where used or MyDBD_StatementResultSet if placeholders
+     *               where used and query had to be prepared. If query does not generate result set,
+     *               boolean is returned.
      */
     public function query()
     {
@@ -277,9 +285,14 @@ class MyDBD
         }
         else
         {
-            $result = new MyDBD_ResultSet($this->link()->query($query), $this->options);
+            $result = $this->link()->query($query);
             $this->handleErrors();
             $this->lastQueryHandle = $this->link(); // used by getAffectedRows()
+
+            if ($result instanceof mysqli_result)
+            {
+                $result = new MyDBD_ResultSet($result, $this->options);
+            }
 
             if ($this->options['query_log']) MyDBD_Logger::log('query', $query, null, microtime(true) - $start);
         }
