@@ -478,7 +478,6 @@ class MyDBD
         try
         {
             $result = $this->link(false)->close();
-            $this->handleErrors();
         }
         catch(SQLNotConnectedException $e)
         {
