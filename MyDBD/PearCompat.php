@@ -44,6 +44,7 @@ abstract class MyDBD_PearCompat
     static public function fetchInto(MyDBD_ResultSet $res, &$row, $fetchMode = DB_FETCHMODE_ORDERED)
     {
         $row = $res->next($fetchMode);
+        return isset($row);
     }
 
     static public function getCol(MyDBD $dbh, $query, $col = 0, $params = array())
