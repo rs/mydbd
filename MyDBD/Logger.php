@@ -41,15 +41,19 @@ abstract class MyDBD_Logger
                     $callPath[] = $step['class'] . (isset($step['line']) ? ':' . $step['line'] : '');
                 }
             }
-            else
+            elseif (isset($step['file']))
             {
                 $callPath[] = $step['file'] . (isset($step['line']) ? ':' . $step['line'] : '');
+            }
+            else
+            {
+                $callPath[] = '{main}' . (isset($step['line']) ? ':' . $step['line'] : '');
             }
         }
 
         if (isset($params))
         {
-            $query = preg_replace('/\?/e', 'array_shift($params)', $query);
+            $query = preg_replace('/\?/e', 'is_string($v = array_shift($params)) ? \'$v\' : $v', $query);
         }
         error_log($command . ' ' . $query);
 
