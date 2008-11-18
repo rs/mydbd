@@ -209,7 +209,7 @@ class MyDBD
      */
     protected function link($autoconnect = true)
     {
-        if (!$this->connected || !$this->link->ping())
+        if (!$this->connected || !@$this->link->ping())
         {
             if ($autoconnect)
             {
@@ -483,6 +483,8 @@ class MyDBD
         {
             $result = null;
         }
+
+        $this->connected = false;
 
         return $result;
     }
