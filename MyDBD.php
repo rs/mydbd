@@ -40,6 +40,66 @@
  */
 class MyDBD
 {
+    /**
+     * Specifies that the fetch method shall return each row as an array indexed by column number
+     * as returned in the corresponding result set, starting at column 0.
+     *
+     * @see MyDBD_ResultSet::setFetchMode()
+     */
+    const FETCH_ORDERED = 1;
+
+    /**
+     * Specifies that the fetch method shall return each row as an array indexed by column name as
+     * returned in the corresponding result set.
+     *
+     * @see MyDBD_ResultSet::setFetchMode()
+     */
+    const FETCH_ASSOC = 2;
+
+    /**
+     * Specifies that the fetch method shall return each row as an object with property names that
+     * correspond to the column names returned in the result set.
+     *
+     * @see MyDBD_ResultSet::setFetchMode()
+     */
+    const FETCH_OBJECT = 3;
+
+    /**
+     * Specifies that the fetch method shall return only a single requested column from the next row
+     * in the result set.
+     *
+     * @see MyDBD_ResultSet::setFetchMode()
+     */
+    const FETCH_COLUMN = 4;
+
+    /**
+     * Represents the MySQL INTEGER data type.
+     *
+     * @see MyDBD_PreparedStatement::prepare()
+     */
+    const INTEGER = 'integer';
+
+    /**
+     * Represents the MySQL DOUBLE data type.
+     *
+     * @see MyDBD_PreparedStatement::prepare()
+     */
+    const DOUBLE = 'double';
+
+    /**
+     * Represents the MySQL CHAR, VARCHAR, or other string data type.
+     *
+     * @see MyDBD_PreparedStatement::prepare()
+     */
+    const STRING = 'string';
+
+    /**
+     * Represents the MySQL large object data type.
+     *
+     * @see MyDBD_PreparedStatement::prepare()
+     */
+    const BLOB = 'blob';
+
     protected
         $options                = null;
 

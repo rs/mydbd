@@ -60,7 +60,7 @@ class MyDBD_StatementResultSet extends MyDBD_ResultSet
             $this->seek(0);
         }
 
-        $this->fetchMode  = self::FETCH_ORDERED;
+        $this->fetchMode  = MyDBD::FETCH_ORDERED;
         $this->fetchClass = 'stdClass';
         $this->fetchCol   = 0;
 

@@ -10,20 +10,12 @@
  */
 class MyDBD_ResultSet implements SeekableIterator, Countable
 {
-    /**#@+ @see setFetchMode() */
-    const
-        FETCH_ORDERED = 1,
-        FETCH_ASSOC   = 2,
-        FETCH_OBJECT  = 3,
-        FETCH_COLUMN  = 4;
-    /**#@-*/
-
     /**#@+ @ignore */
     protected
         $result     = null,
         $options    = null,
         $cursor     = 0,
-        $fetchMode  = self::FETCH_ORDERED,
+        $fetchMode  = MyDBD::FETCH_ORDERED,
         $fetchClass = 'stdClass',
         $fetchCol   = 0;
     /**#@-*/
@@ -42,8 +34,8 @@ class MyDBD_ResultSet implements SeekableIterator, Countable
     /**
      * Sets the default fetch mode used by curret() and next().
      *
-     * @param integer $mode Ether MyDBD_ResultSet::FETCH_ORDERED, MyDBD_ResultSet::FETCH_ASSOC,
-     *                      MyDBD_ResultSet::FETCH_OBJECT or MyDBD_ResultSet::FETCH_COLUMN.
+     * @param integer $mode Ether MyDBD::FETCH_ORDERED, MyDBD::FETCH_ASSOC,
+     *                      MyDBD::FETCH_OBJECT or MyDBD::FETCH_COLUMN.
      *
      * - FETCH_ORDERED: Result is stored in an array of string with numerical keys in the order
      *                  of the fields of the query.
@@ -54,9 +46,9 @@ class MyDBD_ResultSet implements SeekableIterator, Countable
      *
      * @param string|integer $arg Optional argument for some fetch modes:
      *
-     * - If mode is MyDBD_ResultSet::FETCH_OBJECT, this parameter will change the class used to create
+     * - If mode is MyDBD::FETCH_OBJECT, this parameter will change the class used to create
      *   the object. If not provided, stdClass is used by default.
-     * - If mode is MyDBD_ResultSet::FETCH_COLUMN, this parameter defines which column to fetch.
+     * - If mode is MyDBD::FETCH_COLUMN, this parameter defines which column to fetch.
      *   The column can be expressed either as a numeric index or as string field name. If not
      *   provided, 0 is used.
      *
@@ -64,7 +56,7 @@ class MyDBD_ResultSet implements SeekableIterator, Countable
      */
     public function setFetchMode($mode, $arg = null)
     {
-        if ($mode !== self::FETCH_ORDERED && $mode !== self::FETCH_ASSOC && $mode !== self::FETCH_OBJECT && $mode !== self::FETCH_COLUMN)
+        if ($mode !== MyDBD::FETCH_ORDERED && $mode !== MyDBD::FETCH_ASSOC && $mode !== MyDBD::FETCH_OBJECT && $mode !== MyDBD::FETCH_COLUMN)
         {
             throw InvalidArgumentException('Invalid fetch mode: ' . $mode);
         }
@@ -73,8 +65,8 @@ class MyDBD_ResultSet implements SeekableIterator, Countable
 
         switch ($mode)
         {
-            case self::FETCH_OBJECT: $this->fetchClass = isset($arg) ? $arg : 'stdClass'; break;
-            case self::FETCH_COLUMN: $this->fetchCol   = isset($arg) ? $arg : 0;          break;
+            case MyDBD::FETCH_OBJECT: $this->fetchClass = isset($arg) ? $arg : 'stdClass'; break;
+            case MyDBD::FETCH_COLUMN: $this->fetchCol   = isset($arg) ? $arg : 0;          break;
         }
 
         return $this;
@@ -83,8 +75,8 @@ class MyDBD_ResultSet implements SeekableIterator, Countable
     /**
      * Returns the current default fetch mode.
      *
-     * @return integer MyDBD_ResultSet::FETCH_ORDERED, MyDBD_ResultSet::FETCH_ASSOC,
-     *                 MyDBD_ResultSet::FETCH_OBJECT or MyDBD_ResultSet::FETCH_COLUMN
+     * @return integer MyDBD::FETCH_ORDERED, MyDBD::FETCH_ASSOC,
+     *                 MyDBD::FETCH_OBJECT or MyDBD::FETCH_COLUMN
      */
     public function getFetchMode()
     {
@@ -148,10 +140,10 @@ class MyDBD_ResultSet implements SeekableIterator, Countable
 
         switch(isset($mode) ? $mode : $this->fetchMode)
         {
-            case self::FETCH_ORDERED: return $this->fetchArray();
-            case self::FETCH_ASSOC:   return $this->fetchAssoc();
-            case self::FETCH_OBJECT:  return $this->fetchObject();
-            case self::FETCH_COLUMN:  return $this->fetchColumn();
+            case MyDBD::FETCH_ORDERED: return $this->fetchArray();
+            case MyDBD::FETCH_ASSOC:   return $this->fetchAssoc();
+            case MyDBD::FETCH_OBJECT:  return $this->fetchObject();
+            case MyDBD::FETCH_COLUMN:  return $this->fetchColumn();
         }
     }
 

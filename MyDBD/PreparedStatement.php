@@ -45,17 +45,24 @@ class MyDBD_PreparedStatement
      * Prepare a SQL statement for execution. Once prepared, a statement can be executed one or several
      * time with different parameters if placeholder where used.
      *
-     * @see MyDBD_PreparedStatement::prepare()
      * @see MyDBD_PreparedStatement::execute()
      *
      * @param string $query   The SQL query to prepare
      * @param string $type... List of query parameters types. If provided, the number of items MUST
      *                        match the number of markers in the prepared query. If omited, types will
      *                        be automatically guessed from the first execute() parameters PHP ctypes.
-     *                        Items of the string can by one of the following: 'double', 'integer', 'string'.
+     *                        NOTE: if there is only one argument and argument is an array, type list
+     *                        will be fetched from this array for PDO API compatibility.
+     *
+     * Parameters can be one of the following constants:
+     *
+     * - MyDBD::INTEGER: Represents the MySQL INTEGER data type.
+     * - MyDBD::DOUBLE:  Represents the MySQL DOUBLE data type.
+     * - MyDBD::STRING:  Represents the MySQL CHAR, VARCHAR, or other string data type.
+     * - MyDBD::BLOB:    Represents the MySQL large object data type.
      *
      * <code>
-     * $sth->prepare('SELECT * FROM table WHERE login = ? AND age > ?', 'string', 'integer');
+     * $sth->prepare('SELECT * FROM table WHERE login = ? AND age > ?', MyDBD::STRING, MyDBD::INTEGER);
      * </code>
      *
      * This parameter can include one or more parameter markers in the SQL statement by embedding
@@ -93,31 +100,32 @@ class MyDBD_PreparedStatement
             $args = $args[0];
         }
 
-        if (count($args) > 0)
-        {
-            $types = '';
-
-            foreach ($args as $type)
-            {
-                switch($type)
-                {
-                    case 'string':  $types .= 's'; break;
-                    case 'integer': $types .= 'i'; break;
-                    case 'double':  $types .= 'd'; break;
-                    default:
-                        throw new InvalidArgumentException('Invalid type: ' . $type);
-                }
-            }
-
-            $this->bindVariables($types);
-        }
-
         if ($this->options['query_log']) $start = microtime(true);
 
         if ($this->stmt->prepare($query))
         {
             if ($this->options['query_log']) MyDBD_Logger::log('prepare', $query, null, microtime(true) - $start);
             $this->preparedQuery = $query;
+
+            if (count($args) > 0)
+            {
+                $types = '';
+
+                foreach ($args as $type)
+                {
+                    switch($type)
+                    {
+                        case 'string':  $types .= 's'; break;
+                        case 'integer': $types .= 'i'; break;
+                        case 'double':  $types .= 'd'; break;
+                        case 'blob':    $types .= 'b'; break;
+                        default:
+                            throw new InvalidArgumentException('Invalid type: ' . $type);
+                    }
+                }
+
+                $this->bindVariables($types);
+            }
         }
         else
         {
@@ -233,6 +241,7 @@ class MyDBD_PreparedStatement
 
         if (is_null($this->boundParams))
         {
+            // try some auto-detection
             $types = '';
 
             foreach ($params as $param)

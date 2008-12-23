@@ -13,6 +13,9 @@
  */
 abstract class MyDBD_PearCompat
 {
+    static protected
+        $defaultFetchMode = array();
+
     static public function init()
     {
         if (!defined('DB_FETCHMODE_DEFAULT'))
@@ -26,6 +29,47 @@ abstract class MyDBD_PearCompat
 
     /**#@+ @deprecated */
 
+    static public function setFetchMode(MyDBD $dbh, $fetchMode)
+    {
+        self::$defaultFetchMode[spl_object_hash($dbh)] = $fetchMode;
+    }
+
+    static protected function getFetchMode(MyDBD $dbh, $fetchMode)
+    {
+        if ($fetchMode === DB_FETCHMODE_DEFAULT)
+        {
+            if (isset(self::$defaultFetchMode[spl_object_hash($dbh)]))
+            {
+                return self::$defaultFetchMode[spl_object_hash($dbh)];
+            }
+            else
+            {
+                return DB_FETCHMODE_ORDERED;
+            }
+        }
+        else
+        {
+            return $fetchMode;
+        }
+    }
+
+    static public function isError(MyDBD $dbh)
+    {
+        return false;
+    }
+
+    static public function autoCommit(MyDBD $dbh, $state)
+    {
+        if (!$state)
+        {
+            $dbh->begin();
+        }
+        else
+        {
+            throw new Exception('The autoCommit(false) method is not implemented.');
+        }
+    }
+
     static public function affectedRows(MyDBD $dbh)
     {
         return $dbh->getAffectedRows();
@@ -36,12 +80,12 @@ abstract class MyDBD_PearCompat
         return call_user_func_array(array($statement, 'execute'), !is_array($params) ? array($params) : $params);
     }
 
-    static public function fetchRow(MyDBD_ResultSet $res, $fetchMode = DB_FETCHMODE_ORDERED)
+    static public function fetchRow(MyDBD_ResultSet $res, $fetchMode = null)
     {
         return $res->next($fetchMode);
     }
 
-    static public function fetchInto(MyDBD_ResultSet $res, &$row, $fetchMode = DB_FETCHMODE_ORDERED)
+    static public function fetchInto(MyDBD_ResultSet $res, &$row, $fetchMode = null)
     {
         $row = $res->next($fetchMode);
         return isset($row);
@@ -57,9 +101,9 @@ abstract class MyDBD_PearCompat
         return $dbh->query($query, $params)->fetchColumn(0);
     }
 
-    static public function getRow(MyDBD $dbh, $query, $params = array(), $fetchMode = DB_FETCHMODE_ORDERED)
+    static public function getRow(MyDBD $dbh, $query, $params = array(), $fetchMode = DB_FETCHMODE_DEFAULT)
     {
-        return $dbh->query($query, $params)->next($fetchMode);
+        return $dbh->query($query, $params)->next(self::getFetchMode($dbh, $fetchMode));
     }
 
     /**
@@ -67,9 +111,9 @@ abstract class MyDBD_PearCompat
      *
      * @see http://pear.php.net/manual/en/package.database.db.db-common.getall.php
      */
-    static public function getAll(MyDBD $dbh, $query, $params = array(), $fetchMode = DB_FETCHMODE_ORDERED)
+    static public function getAll(MyDBD $dbh, $query, $params = array(), $fetchMode = DB_FETCHMODE_DEFAULT)
     {
-        return $dbh->query($query, $params)->setFetchMode($fetchMode)->fetchAll();
+        return $dbh->query($query, $params)->setFetchMode(self::getFetchMode($dbh, $fetchMode))->fetchAll();
     }
 
     /**
@@ -82,7 +126,7 @@ abstract class MyDBD_PearCompat
      *
      * @see http://pear.php.net/manual/en/package.database.db.db-common.getassoc.php
      */
-    static public function getAssoc(MyDBD $dbh, $query, $forceArray = false, $params = array(), $fetchMode = DB_FETCHMODE_ORDERED, $group = false)
+    static public function getAssoc(MyDBD $dbh, $query, $forceArray = false, $params = array(), $fetchMode = DB_FETCHMODE_DEFAULT, $group = false)
     {
         $res = $dbh->query($query, $params);
 
@@ -97,7 +141,7 @@ abstract class MyDBD_PearCompat
 
         if ($cols > 2 || (isset($force_array) && $force_array))
         {
-            switch($fetchMode)
+            switch(self::getFetchMode($dbh, $fetchMode))
             {
                 case DB_FETCHMODE_ASSOC:
                     while (is_array($row = $res->fetchAssoc()))
