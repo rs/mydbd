@@ -93,7 +93,7 @@ abstract class MyDBD_PearCompat
 
     static public function getCol(MyDBD $dbh, $query, $col = 0, $params = array())
     {
-        return $dbh->query($query, $params)->setFetchMode(MyDBD_ResultSet::FETCH_COLUMN, $col)->fetchAll();
+        return $dbh->query($query, $params)->setFetchMode(MyDBD::FETCH_COLUMN, $col)->fetchAll();
     }
 
     static public function getOne(MyDBD $dbh, $query, $params = array())
