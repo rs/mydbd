@@ -132,7 +132,7 @@ class MyDBD_PreparedStatement
             $this->handleErrors();
 
             // if handle errors doesn't throw an exception, do it by ourself
-            throw new SQLException('Cannot prepare statement: ' . $query);
+            throw new SQLUnknownException('Cannot prepare statement: ' . $query);
         }
     }
 

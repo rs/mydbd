@@ -39,6 +39,7 @@ abstract class MyDBD_Error
             1356 => 'SQLDivzeroException',
             1451 => 'SQLConstraintException',
             1452 => 'SQLConstraintException',
+            1066 => 'SQLNotUniqueTableAliasException',
             2030 => 'SQLNotPreparedStatementException',
         );
 
@@ -48,6 +49,10 @@ abstract class MyDBD_Error
         {
             $class = self::$errorMap[$errorno];
             throw new $class($error, $errorno, $sqlstate);
+        }
+        else
+        {
+            throw new SQLUnknownException($error, $errorno, $sqlstate);
         }
     }
 }
@@ -64,6 +69,7 @@ class SQLException extends Exception
         $this->sqlstate = $sqlstate;
     }
 }
+class SQLUnknownException extends SQLException {}
 class SQLSyntaxException extends SQLException {}
 class SQLConstraintException extends SQLException {}
 class SQLNotFoundException extends SQLException {}
@@ -92,4 +98,5 @@ class SQLConstraintNotNullException extends SQLException {}
 class SQLReadOnlyException extends SQLException {}
 class SQLNotConnectedException extends SQLException {}
 class SQLNotPreparedStatementException extends SQLException {}
+class SQLNotUniqueTableAliasException extends SQLException {}
 /**#@-*/
