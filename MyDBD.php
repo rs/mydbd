@@ -397,7 +397,18 @@ class MyDBD
         $this->handleErrors();
 
         $sth = new MyDBD_PreparedStatement($stmt, $this->options);
-        call_user_func_array(array($sth, 'prepare'), $args);
+        try
+        {
+            call_user_func_array(array($sth, 'prepare'), $args);
+        }
+        catch (SQLException, $e)
+        {
+            // if the error is not related to the statement, it may be related to the connection
+            $this->handleErrors();
+
+            // otherwise, just throw the original exception
+            throw $e;
+        }
 
         return $sth;
     }
