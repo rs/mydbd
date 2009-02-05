@@ -401,7 +401,7 @@ class MyDBD
         {
             call_user_func_array(array($sth, 'prepare'), $args);
         }
-        catch (SQLException, $e)
+        catch (SQLException $e)
         {
             // if the error is not related to the statement, it may be related to the connection
             $this->handleErrors();
