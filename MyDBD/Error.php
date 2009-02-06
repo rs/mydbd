@@ -43,8 +43,25 @@ abstract class MyDBD_Error
             2030 => 'SQLNotPreparedStatementException',
         );
 
-    static public function throwError($errorno, $error, $sqlstate = null)
+    static public function throwError($errorno, $error, $sqlstate = null, $query = null, array $params = null)
     {
+        error_log($query);
+        if (isset($query))
+        {
+            $error .= ' for query: ' . $query;
+        }
+
+        if (isset($params))
+        {
+            $kv = array();
+            foreach ($params as $key => $value)
+            {
+                $kv[] = $key . '=' . $value;
+            }
+
+            $error .= ' with params: ' . implode(', ', $kv);
+        }
+
         if (isset(self::$errorMap[$errorno]))
         {
             $class = self::$errorMap[$errorno];

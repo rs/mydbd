@@ -284,11 +284,11 @@ class MyDBD
         return $this->link;
     }
 
-    protected function handleErrors()
+    protected function handleErrors($query = null)
     {
         if ($this->link->errno)
         {
-            MyDBD_Error::throwError($this->link->errno, $this->link->error, $this->link->sqlstate);
+            MyDBD_Error::throwError($this->link->errno, $this->link->error, $this->link->sqlstate, $query);
         }
     }
 
@@ -346,7 +346,7 @@ class MyDBD
         else
         {
             $result = $this->link()->query($query);
-            $this->handleErrors();
+            $this->handleErrors($query);
             $this->lastQueryHandle = $this->link(); // used by getAffectedRows()
 
             if ($result instanceof mysqli_result)

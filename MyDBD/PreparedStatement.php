@@ -129,7 +129,7 @@ class MyDBD_PreparedStatement
         }
         else
         {
-            $this->handleErrors();
+            $this->handleErrors($query);
 
             // if handle errors doesn't throw an exception, do it by ourself
             throw new SQLUnknownException('Cannot prepare statement: ' . $query);
@@ -163,9 +163,11 @@ class MyDBD_PreparedStatement
      */
     public function execute()
     {
+        $params = null;
+
         if (is_null($this->preparedQuery))
         {
-            throw new SQLNotPreparedStatementException('Cannot execute an not prepared statement.');
+            throw new SQLNotPreparedStatementException('Cannot execute a not prepared statement.');
         }
 
         if ($this->options['query_log']) $start = microtime(true);
@@ -185,7 +187,7 @@ class MyDBD_PreparedStatement
 
         $this->stmt->execute();
         $this->stmt->store_result();
-        $this->handleErrors();
+        $this->handleErrors($this->preparedQuery, $params);
 
         if ($this->options['query_log']) MyDBD_Logger::log('execute', $this->preparedQuery, (isset($params) ? $params : null), microtime(true) - $start);
 
@@ -232,9 +234,10 @@ class MyDBD_PreparedStatement
             (
                 sprintf
                 (
-                    'Wrong parameter count for prepared statement: %d expected, %d given.',
+                    'Wrong parameter count, %d expected, %d given for prepared statement: %s.',
                     $this->stmt->param_count,
-                    count($params)
+                    count($params),
+                    $this->preparedQuery
                 )
             );
         }
@@ -277,9 +280,10 @@ class MyDBD_PreparedStatement
             (
                 sprintf
                 (
-                    'Wrong type count for prepared statement: %d expected, %d given.',
+                    'Wrong type count, %d expected, %d given for statement: %s.',
                     $this->stmt->param_count,
-                    strlen($types)
+                    strlen($types),
+                    $this->preparedQuery
                 )
             );
         }
@@ -293,14 +297,14 @@ class MyDBD_PreparedStatement
 
         call_user_func_array('mysqli_stmt_bind_param', $args);
 
-        $this->handleErrors();
+        $this->handleErrors($this->preparedQuery);
     }
 
-    protected function handleErrors()
+    protected function handleErrors($query = null, $params = null)
     {
         if ($this->stmt->errno)
         {
-            MyDBD_Error::throwError($this->stmt->errno, $this->stmt->error);;
+            MyDBD_Error::throwError($this->stmt->errno, $this->stmt->error, null, $query, $params);
         }
     }
 }
