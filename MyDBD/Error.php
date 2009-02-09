@@ -25,6 +25,7 @@ abstract class MyDBD_Error
             1049 => 'SQLNoSuchDBException',
             1050 => 'SQLAlreadyExistsException',
             1051 => 'SQLNoSuchTableException',
+            1053 => 'SQLServerShutdownException',
             1054 => 'SQLNoSuchFieldException',
             1061 => 'SQLAlreadyExistsException',
             1062 => 'SQLAlreadyExistsException',
@@ -95,6 +96,7 @@ class SQLNodbselectedException extends SQLException {}
 class SQLCannotCreateException extends SQLException {}
 class SQLCannotDropException extends SQLException {}
 class SQLNoSuchTableException extends SQLException {}
+class SQLServerShutdownException extends SQLException {}
 class SQLNoSuchFieldException extends SQLException {}
 class SQLNeedMoreDataException extends SQLException {}
 class SQLNotLockedException extends SQLException {}
