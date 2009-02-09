@@ -45,7 +45,6 @@ abstract class MyDBD_Error
 
     static public function throwError($errorno, $error, $sqlstate = null, $query = null, array $params = null)
     {
-        error_log($query);
         if (isset($query))
         {
             $error .= ' for query: ' . $query;
@@ -53,13 +52,7 @@ abstract class MyDBD_Error
 
         if (isset($params))
         {
-            $kv = array();
-            foreach ($params as $key => $value)
-            {
-                $kv[] = $key . '=' . $value;
-            }
-
-            $error .= ' with params: ' . implode(', ', $kv);
+            $error .= ' with params: ' . implode(', ', $params);
         }
 
         if (isset(self::$errorMap[$errorno]))
@@ -69,7 +62,7 @@ abstract class MyDBD_Error
         }
         else
         {
-            throw new SQLUnknownException($error, $errorno, $sqlstate);
+            throw new SQLUnknownException('SQLERROR[' . $errorno . '] ' . $error, $errorno, $sqlstate);
         }
     }
 }
