@@ -305,16 +305,18 @@ class MyDBD_ResultSet implements SeekableIterator, Countable
         }
     }
 
+    //
     // PEAR::Db compatibility layer
-    public function __call($method, $arguments)
+    //
+
+    public function fetchRow($fetchMode = null)
     {
-        if ($this->options['pear_compat'])
-        {
-            return call_user_func_array(array($this->options['pear_compat_class'], $method), array_merge(array($this), $arguments));
-        }
-        else
-        {
-            throw new BadFunctionCallException('Invalid method call: ' . $method);
-        }
+        return $this->next($fetchMode);
+    }
+
+    public function fetchInto(&$row, $fetchMode = null)
+    {
+        $row = $this->next($fetchMode);
+        return isset($row);
     }
 }

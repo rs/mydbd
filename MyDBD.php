@@ -38,6 +38,13 @@
  * @package MyDBD
  * @author Olivier Poitrey (rs@dailymotion.com)
  */
+
+// PEAR_DB Compat constants
+define('DB_FETCHMODE_DEFAULT', 1);
+define('DB_FETCHMODE_ORDERED', 1);
+define('DB_FETCHMODE_ASSOC',   2);
+define('DB_FETCHMODE_OBJECT',  3);
+
 class MyDBD
 {
     /**
@@ -113,7 +120,8 @@ class MyDBD
         $extendedQueryInfo      = array(),
         $replicationDelay       = -1,
         $realtime               = null,
-        $engines                = null;
+        $engines                = null,
+        $defaultFetchMode       = null;
 
     static public function register()
     {
@@ -149,8 +157,6 @@ class MyDBD
      * - readonly:            The connection will be considerated readonly, all attempts to perform
      *                        a write query (INSERT, DELETE...) will throw an exception. (bool)
      * - query_log:           If query_log is on, all queries will be logged using MyDBD_Logger. (bool)
-     * - pear_compat:         Activate the PEAR Db compatibility layer. (bool)
-     * - pear_compat_class:   Change the default PEAR Db compatibility class. (string)
      * - query_prepare_cache: Make the query() method to use prepareCached() instead of prepare()
      *                        when needed.
      * - client_interactive:  Allow interactive_timeout seconds (instead of wait_timeout seconds)
@@ -161,7 +167,6 @@ class MyDBD
      *                        Unix socket file connections, not to connections made via named pipes,
      *                        or shared memory. (int)
      *
-     * @see MyDBD_PEARCompat for more inforation on PEAR::Db compatibility layer.
      * @see MyDBD_Logger     for more info en query_log mode.
      *
      * @param array $connectionInfo  Informations to connect to the database
@@ -198,8 +203,6 @@ class MyDBD
                 'ignore_space'          => false,
                 'readonly'              => false,
                 'query_log'             => false,
-                'pear_compat'           => false,
-                'pear_compat_class'     => 'MyDBD_PearCompat',
                 'query_prepare_cache'   => false,
                 'connect_timeout'       => 0,
                 'wait_timeout'          => 0,
@@ -214,8 +217,6 @@ class MyDBD
         if ($this->options['ignore_space'])       $this->connectionInfo['flags'] |= MYSQLI_CLIENT_IGNORE_SPACE;
         if ($this->options['client_interactive']) $this->connectionInfo['flags'] |= MYSQLI_CLIENT_INTERACTIVE;
         if ($this->options['connect_timeout'])    $this->link->options(MYSQLI_OPT_CONNECT_TIMEOUT, $options['connect_timeout']);
-        // force loading of PEAR compatilbity layer
-        if ($this->options['pear_compat'])        call_user_func(array($this->options['pear_compat_class'], 'init'));
     }
 
     /**
@@ -787,16 +788,184 @@ class MyDBD
         return in_array(strtolower($engine), $this->engines);
     }
 
+    //
     // PEAR::Db compatibility layer
-    public function __call($method, $arguments)
+    //
+
+    /**#@+ @deprecated */
+
+    public function setFetchMode($fetchMode)
     {
-        if ($this->options['pear_compat'])
+        $this->defaultFetchMode = $fetchMode;
+    }
+
+    protected function getFetchMode($fetchMode)
+    {
+        if ($fetchMode === DB_FETCHMODE_DEFAULT)
         {
-            return call_user_func_array(array($this->options['pear_compat_class'], $method), array_merge(array($this), $arguments));
+            if (isset($this->defaultFetchMode))
+            {
+                return $this->defaultFetchMode;
+            }
+            else
+            {
+                return DB_FETCHMODE_ORDERED;
+            }
         }
         else
         {
-            throw new BadFunctionCallException('Invalid method call: ' . $method);
+            return $fetchMode;
         }
     }
+
+    public function isError()
+    {
+        return false;
+    }
+
+    public function autoCommit($state)
+    {
+        if (!$state)
+        {
+            $this->begin();
+        }
+        else
+        {
+            throw new Exception('The autoCommit(false) method is not implemented.');
+        }
+    }
+
+    public function affectedRows()
+    {
+        return $this->getAffectedRows();
+    }
+
+    public function execute(MyDBD_PreparedStatement $statement, $params = null)
+    {
+        return call_user_func_array(array($statement, 'execute'), !is_array($params) ? array($params) : $params);
+    }
+
+    public function getCol($query, $col = 0, $params = array())
+    {
+        return $this->query($query, $params)->setFetchMode(MyDBD::FETCH_COLUMN, $col)->fetchAll();
+    }
+
+    public function getOne($query, $params = array())
+    {
+        return $this->query($query, $params)->fetchColumn(0);
+    }
+
+    public function getRow($query, $params = array(), $fetchMode = DB_FETCHMODE_DEFAULT)
+    {
+        return $this->query($query, $params)->next($this->getFetchMode($fetchMode));
+    }
+
+    /**
+     * Runs the query provided and puts the entire result set into a nested array.
+     *
+     * @see http://pear.php.net/manual/en/package.database.db.db-common.getall.php
+     */
+    public function getAll($query, $params = array(), $fetchMode = DB_FETCHMODE_DEFAULT)
+    {
+        return $this->query($query, $params)->setFetchMode($this->getFetchMode($fetchMode))->fetchAll();
+    }
+
+    /**
+     * Runs a query and returns the data as an array.
+     *
+     * If the result set contains more than two columns, the value will be an array of the values
+     * from column 2 to n. If the result set contains only two columns, the returned value will
+     * be a scalar with the value of the second column (unless forced to an array with the
+     * $force_array parameter).
+     *
+     * @see http://pear.php.net/manual/en/package.database.db.db-common.getassoc.php
+     */
+    public function getAssoc($query, $forceArray = false, $params = array(), $fetchMode = DB_FETCHMODE_DEFAULT, $group = false)
+    {
+        $res = $this->query($query, $params);
+
+        $cols = $res->getFieldCount();
+
+        if ($cols < 2)
+        {
+            throw new SQLTruncatedException();
+        }
+
+        $results = array();
+
+        if ($cols > 2 || (isset($force_array) && $force_array))
+        {
+            switch($this->getFetchMode($fetchMode))
+            {
+                case DB_FETCHMODE_ASSOC:
+                    while (is_array($row = $res->fetchAssoc()))
+                    {
+                        reset($row);
+                        $key = current($row);
+                        unset($row[key($row)]);
+                        if($group)
+                        {
+                            $results[$key][] = $row;
+                        }
+                        else
+                        {
+                            $results[$key] = $row;
+                        }
+                    }
+                    break;
+
+                case DB_FETCHMODE_OBJECT:
+                    while ($row = $res->fetchObject())
+                    {
+                        $arr = get_object_vars($row);
+                        $key = current($arr);
+                        if ($group)
+                        {
+                            $results[$key][] = $row;
+                        }
+                        else
+                        {
+                            $results[$key] = $row;
+                        }
+                    }
+                    break;
+
+                default:
+                    while (is_array($row = $res->fetchArray()))
+                    {
+                        // we shift away the first element to get
+                        // indices running from 0 again
+                        $key = array_shift($row);
+                        if ($group)
+                        {
+                            $results[$key][] = $row;
+                        }
+                        else
+                        {
+                            $results[$key] = $row;
+                        }
+                    }
+                    break;
+            }
+        }
+        else
+        {
+            // return scalar values
+            while (is_array($row = $res->fetchRow(DB_FETCHMODE_ORDERED)))
+            {
+                if ($group)
+                {
+                    $results[$row[0]][] = $row[1];
+                }
+                else
+                {
+                    $results[$row[0]] = $row[1];
+                }
+            }
+        }
+
+        return $results;
+    }
+
+    /**#@-*/
 }
