@@ -342,7 +342,7 @@ class MyDBD
         if (count($params) > 0)
         {
             $sth = $this->options['query_prepare_cache'] ? $this->prepareCached($query) : $this->prepare($query);
-            $result = call_user_func_array(array($sth, 'execute'), $params);
+            $result = $sth->execute($params);
         }
         else
         {
@@ -392,13 +392,14 @@ class MyDBD
     public function prepare()
     {
         $args = func_get_args();
+        $query = array_shift($args);
 
         $stmt = $this->link()->stmt_init();
         $this->lastQueryHandle = $stmt; // used by affectedRows()
         $this->handleErrors();
 
         $sth = new MyDBD_PreparedStatement($stmt, $this->options);
-        call_user_func_array(array($sth, 'prepare'), $args);
+        $sth->prepare($query, $args);
 
         return $sth;
     }
@@ -423,7 +424,7 @@ class MyDBD
 
         if (!isset($this->statementCache[$cacheKey]))
         {
-            $this->statementCache[$cacheKey] = call_user_func_array(array($this, 'prepare'), $args);
+            $this->statementCache[$cacheKey] = $this->prepare($args);
             $this->statementCache[$cacheKey]->freeze();
         }
 
@@ -842,7 +843,14 @@ class MyDBD
 
     public function execute(MyDBD_PreparedStatement $statement, $params = null)
     {
-        return call_user_func_array(array($statement, 'execute'), !is_array($params) ? array($params) : $params);
+        if (isset($params))
+        {
+            return $statement->execute($params);
+        }
+        else
+        {
+            return $statement->execute();
+        }
     }
 
     public function getCol($query, $col = 0, $params = array())
