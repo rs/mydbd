@@ -121,7 +121,8 @@ class MyDBD
         $replicationDelay       = -1,
         $realtime               = null,
         $engines                = null,
-        $defaultFetchMode       = null;
+        $defaultFetchMode       = null,
+        $autocommitState        = true;
 
     static public function register()
     {
@@ -432,6 +433,19 @@ class MyDBD
     }
 
     /**
+     * Change autocommit state
+     *
+     * @param boolean $state Activate or disable MySQL autocommiting.
+     *
+     * @return boolean TRUE on success, FALSE on failure.
+     */
+    public function setAutocommit($state)
+    {
+        $this->autocommitState = $state;
+        return $this->link()->autocommit((bool)$state);
+    }
+
+    /**
      * Start a new transaction.
      *
      * To finish the transaction you have to call commit() to apply the changes or rollback() to
@@ -444,11 +458,17 @@ class MyDBD
      */
     public function begin()
     {
+        if (!$this->autocommitState)
+        {
+            error_log('MyDBD: begin a transaction on a connection with autocommit already disabled.');
+        }
+
         return $this->link()->autocommit(false);
     }
 
     /**
-     * Commits the current transaction.
+     * Commits the current transaction and turn autocommit back to true if it was true before the
+     * call to begin().
      *
      * @return boolean TRUE on success, FALSE on failure.
      */
@@ -456,11 +476,18 @@ class MyDBD
     {
         $result = $this->link(false)->commit();
         $this->handleErrors();
+
+        if ($this->autocommitState)
+        {
+            $this->link()->autocommit(false);
+        }
+
         return $result;
     }
 
     /**
-     * Rolls back current transaction.
+     * Rolls back current transaction    and turn autocommit back to true if it was true before the
+     * call to begin().
      *
      * @return boolean TRUE on success, FALSE on failure.
      */
@@ -468,6 +495,12 @@ class MyDBD
     {
         $result = $this->link(false)->rollback();
         $this->handleErrors();
+
+        if ($this->autocommitState)
+        {
+            $this->link()->autocommit(false);
+        }
+
         return $result;
     }
 
@@ -826,14 +859,7 @@ class MyDBD
 
     public function autoCommit($state)
     {
-        if (!$state)
-        {
-            $this->begin();
-        }
-        else
-        {
-            throw new Exception('The autoCommit(false) method is not implemented.');
-        }
+        $this->setAutocommit($state);
     }
 
     public function affectedRows()
