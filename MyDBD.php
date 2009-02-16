@@ -122,7 +122,8 @@ class MyDBD
         $realtime               = null,
         $engines                = null,
         $defaultFetchMode       = null,
-        $autocommitState        = true;
+        $autocommitState        = true,
+        $transactionInProgress  = false;
 
     static public function register()
     {
@@ -218,6 +219,15 @@ class MyDBD
         if ($this->options['ignore_space'])       $this->connectionInfo['flags'] |= MYSQLI_CLIENT_IGNORE_SPACE;
         if ($this->options['client_interactive']) $this->connectionInfo['flags'] |= MYSQLI_CLIENT_INTERACTIVE;
         if ($this->options['connect_timeout'])    $this->link->options(MYSQLI_OPT_CONNECT_TIMEOUT, $options['connect_timeout']);
+    }
+
+    public function __destruct()
+    {
+        if ($this->transactionInProgress)
+        {
+            error_log('A transaction have been left uncommited, rolling it back...');
+            $this->rollback();
+        }
     }
 
     /**
@@ -463,7 +473,8 @@ class MyDBD
             error_log('MyDBD: begin a transaction on a connection with autocommit already disabled.');
         }
 
-        return $this->link()->autocommit(false);
+        $this->transactionInProgress = true;
+        $this->link()->autocommit(false);
     }
 
     /**
@@ -475,6 +486,7 @@ class MyDBD
     public function commit()
     {
         $result = $this->link(false)->commit();
+        $this->transactionInProgress = false;
         $this->handleErrors();
 
         if ($this->autocommitState)
@@ -494,6 +506,7 @@ class MyDBD
     public function rollback()
     {
         $result = $this->link(false)->rollback();
+        $this->transactionInProgress = false;
         $this->handleErrors();
 
         if ($this->autocommitState)
