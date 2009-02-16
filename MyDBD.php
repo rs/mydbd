@@ -491,7 +491,7 @@ class MyDBD
 
         if ($this->autocommitState)
         {
-            $this->link()->autocommit(false);
+            $this->link()->autocommit(true);
         }
 
         return $result;
@@ -511,7 +511,7 @@ class MyDBD
 
         if ($this->autocommitState)
         {
-            $this->link()->autocommit(false);
+            $this->link()->autocommit(true);
         }
 
         return $result;
