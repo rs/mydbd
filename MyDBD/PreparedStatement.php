@@ -228,8 +228,8 @@ class MyDBD_PreparedStatement
 
     protected function bindParams(array $params)
     {
-        // prevent from array with holes in indexes (optained by array_unique() for instance)
-        $params = array_merge($params);
+        // fix arrays with holes in their indexes (obtained with array_unique() for instance)
+        $params = array_values($params);
 
         if (count($params) != $this->stmt->param_count)
         {
