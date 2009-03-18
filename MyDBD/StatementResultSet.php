@@ -72,7 +72,21 @@ class MyDBD_StatementResultSet extends MyDBD_ResultSet
      */
     public function fetchArray()
     {
-        return $this->result->fetch() ? $this->boundData : null;
+        if($this->result->fetch())
+        {
+            // Here we have to recreate a brand new array, otherwise we would expose our
+            // boundData referenced fields, which could lead to unexpected behaviors.
+            $array = array();
+            for (($max = $this->metadata->field_count) && $i = 0; $i < $max; $i++)
+            {
+                $array[$i] = $this->boundData[$i];
+            }
+            return $array;
+        }
+        else
+        {
+            return null;
+        }
     }
 
     /**
