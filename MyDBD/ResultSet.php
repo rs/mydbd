@@ -239,7 +239,7 @@ class MyDBD_ResultSet implements SeekableIterator, Countable
      */
     public function fetchArray()
     {
-        return $this->result->fetch_array();
+        return $this->result->fetch_row();
     }
 
     /**
