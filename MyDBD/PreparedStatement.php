@@ -111,16 +111,16 @@ class MyDBD_PreparedStatement
             {
                 $types = '';
 
-                foreach ($args as $type)
+                for ($i = 0, $total = count($args); $i < $total; $i++)
                 {
-                    switch($type)
+                    switch($args[$i])
                     {
                         case 'string':  $types .= 's'; break;
                         case 'integer': $types .= 'i'; break;
                         case 'double':  $types .= 'd'; break;
                         case 'blob':    $types .= 'b'; break;
                         default:
-                            throw new InvalidArgumentException('Invalid type: ' . $type);
+                            throw new InvalidArgumentException('Invalid type: ' . $args[$i]);
                     }
                 }
 
@@ -165,12 +165,15 @@ class MyDBD_PreparedStatement
     {
         $params = null;
 
-        if (is_null($this->preparedQuery))
+        if (null === $this->preparedQuery)
         {
             throw new SQLNotPreparedStatementException('Cannot execute a not prepared statement.');
         }
 
-        if ($this->options['query_log']) $start = microtime(true);
+        if ($queryLog = $this->options['query_log'])
+        {
+            $start = microtime(true);
+        }
 
         if ($this->stmt->param_count > 0)
         {
@@ -189,14 +192,17 @@ class MyDBD_PreparedStatement
         $this->stmt->store_result();
         $this->handleErrors($this->preparedQuery, $params);
 
-        if ($this->options['query_log']) MyDBD_Logger::log('execute', $this->preparedQuery, (isset($params) ? $params : null), microtime(true) - $start);
+        if ($queryLog)
+        {
+            MyDBD_Logger::log('execute', $this->preparedQuery, (isset($params) ? $params : null), microtime(true) - $start);
+        }
 
         if ($metadata = $this->stmt->result_metadata())
         {
             // integrity problem due to mysqli design limitation
             // you can't store several result set on several executed query
             // from the same prepared statment
-            if (!isset($this->resultSet))
+            if (null === $this->resultSet)
             {
                 $this->resultSet = new MyDBD_StatementResultSet($this->stmt, $metadata, $this->options);
             }
@@ -245,13 +251,15 @@ class MyDBD_PreparedStatement
             );
         }
 
-        if (is_null($this->boundParams))
+        if (null === $this->boundParams)
         {
             // try some auto-detection
             $types = '';
 
-            foreach ($params as $param)
+            for ($i = 0, $total = $this->stmt->param_count; $i < $total; $i++)
             {
+                $param = $params[$i];
+
                 if (is_double($param))
                 {
                     $types .= 'd';
@@ -269,7 +277,7 @@ class MyDBD_PreparedStatement
             $this->bindVariables($types);
         }
 
-        for ($i = 0; $i < count($params); $i++)
+        for ($i = 0, $total = count($params); $i < $total; $i++)
         {
             $this->bindedData[$i] = $params[$i];
         }
@@ -293,7 +301,7 @@ class MyDBD_PreparedStatement
 
         $this->boundParams = array_fill(0, $this->stmt->param_count, null);
         $args = array($this->stmt, $types);
-        for ($i = 0; $i < count($this->boundParams); $i++)
+        for (($total = count($this->boundParams)) && $i = 0; $i < $total; $i++)
         {
             $args[$i + 2] = &$this->bindedData[$i];
         }
